@@ -1,0 +1,36 @@
+.root-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 1rem;
+  padding-bottom: var(--bottom-menu-height);
+  box-sizing: border-box;
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure content doesn't overlap with bottom navigation on smaller screens */
+@media screen and (max-height: 600px) {
+  .root-inner {
+    padding-bottom: calc(var(--bottom-menu-height) + 8px);
+  }
+}
+
+/* Additional styles for mobile optimization */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}

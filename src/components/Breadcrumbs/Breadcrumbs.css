@@ -1,0 +1,73 @@
+.breadcrumbs {
+  position: fixed;
+  top: 1rem;
+  inset-inline: 0;
+  z-index: 2000;
+}
+
+.breadcrumbs > div {
+  margin: 0 1rem;
+  padding: 0.5rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--tg-theme-bg-color);
+  color: var(--tg-theme-text-color);
+}
+
+.breadcrumbs ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  flex-grow: 1;
+}
+
+.breadcrumbs li {
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumb-link,
+.breadcrumb-current {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  color: var(--tg-theme-text-color, #000000);
+  text-decoration: none;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.breadcrumb-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 0px;
+}
+
+.breadcrumb-separator {
+  margin: 0 8px;
+  line-height: 1;
+  color: var(--tg-theme-hint-color, #999999);
+}
+
+.breadcrumb-current {
+  font-weight: bold;
+  color: var(--tg-theme-accent-text-color, #3390ec);
+}
+
+.breadcrumb-text {
+  line-height: 1;
+  display: block;
+  height: 100%;
+}
+
+/* Стили для иконок */
+.breadcrumb-link svg,
+.breadcrumb-current svg {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+}

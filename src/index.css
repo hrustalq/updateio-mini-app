@@ -1,0 +1,30 @@
+:root {
+  --bottom-menu-height: 60px;
+  --breadcrumb-height: calc(56px + 0.5rem);
+  --layout-height: calc(var(--tg-viewport-stable-height) - var(--bottom-menu-height) - var(--breadcrumb-height));
+}
+
+body {
+  background: var(--tg-theme-secondary-bg-color, white);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  margin: 0;
+}
+
+#root {
+  flex: 1 1 100%;
+  height: var(--layout-height);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+html,
+body {
+  overflow-x: hidden;
+  height: var(--tg-viewport-stable-height);
+}

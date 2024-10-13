@@ -1,0 +1,203 @@
+:root {
+  --step-buttons-height: 56px;
+}
+
+.add-subscription-page {
+  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.add-subscription-page__title {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.add-subscription-page__step-info {
+  margin: 16px 0;
+}
+
+.add-subscription-page__content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-radius: 16px;
+  overflow: hidden;
+  flex-grow: 1;
+}
+
+.add-subscription-page__buttons {
+  position: fixed;
+  bottom: 10px;
+  z-index: 1000;
+  width: 100%;
+  inset-inline: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+}
+
+.application-grid, .game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  padding: 0 1rem;
+  padding-top: 1rem;
+  overflow-x: hidden;
+  max-height: calc(var(--layout-height) - var(--step-buttons-height) - 14.5rem);
+  padding-bottom: 1rem;
+  overflow-y: auto;
+  background-color: var(--tgui--bg_color);
+  border-radius: 0 0 16px 16px;
+  gap: 16px;
+}
+
+.game-grid {
+  grid-template-columns: 1fr;
+}
+
+.application-card, .game-card {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: outline 0.1s ease;
+  height: 196px;
+}
+
+.application-logo, .game-logo {
+  display: block;
+  margin: auto;
+  width: 128px !important;
+  height: 128px !important;
+  box-shadow: none !important;
+  object-fit: cover;
+}
+
+.application-logo img, .game-logo img {
+  height: 128px;
+  width: 128px;
+  object-fit: contain;
+}
+
+.success-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 100%;
+  gap: 16px;
+}
+
+.success-message__title {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.search-input {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.no-results {
+  text-align: center;
+  margin-top: 32px;
+  color: var(--tgui--secondary_color);
+}
+
+.home-link {
+  margin-top: 24px;
+  text-decoration: none;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+/* Добавьте эти стили в конец файла */
+
+.confirm-subscription {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.confirm-subscription__card {
+  width: 100%;
+  max-width: 400px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.confirm-subscription__title {
+  display: block;
+  text-align: center;
+  font-size: 1.2rem;
+}
+
+.confirm-subscription__details {
+  padding: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.confirm-subscription__app,
+.confirm-subscription__game {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  gap: 0.5rem;
+}
+
+.confirm-subscription__app-logo,
+.confirm-subscription__game-logo {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 100% !important;
+  overflow: hidden;
+  border: none !important;
+  width: unset !important;
+  box-shadow: none !important;
+}
+
+.confirm-subscription__game-logo img,
+.confirm-subscription__app-logo img {
+  object-fit: fill !important;
+}
+
+.confirm-subscription__arrow {
+  display: flex;
+  align-items: center;
+}
+
+.confirm-subscription__message {
+  text-align: center;
+  color: var(--tgui--secondary_text_color);
+}
+
+.confirm-subscription__actions {
+  margin: 1rem 0 0 0;
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
+.confirm-subscription__actions button {
+  width: 100%;
+}
