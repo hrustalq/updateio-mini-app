@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Card, 
@@ -16,86 +16,50 @@ import { motion, AnimatePresence } from 'framer-motion';
 import './AddSubscriptionPage.css';
 import { useSubscriptionStore } from '@/stores/subscribtion.store';
 import { Check } from 'lucide-react';
-import { getApps, searchApps } from '@/api/apps';
-import { getGames, searchGames, createSubscription } from '@/api/games';
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import debounce from 'lodash/debounce';
-import { Subscription, CreateSubscriptionDto } from '@/api/types';
+import $api from '@/api';
 
 const ApplicationStep: React.FC = () => {
   const { application, setApplication } = useSubscriptionStore();
   const [searchTerm, setSearchTerm] = useState('');
-  const parentRef = React.useRef<HTMLDivElement>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 10; // Количество элементов на странице
 
-  const fetchApps = useCallback(async ({ pageParam = 1 }) => {
-    try {
-      const result = searchTerm
-        ? await searchApps(searchTerm, pageParam, 20)
-        : await getApps(pageParam, 20);
-      return result;
-    } catch (error) {
-      console.error('Error fetching applications:', error);
-      throw error;
+  // Создаем объект параметров запроса
+  const queryParams = useMemo(() => {
+    const params: { search?: string; page: number; pageSize: number } = {
+      page,
+      pageSize,
+    };
+    if (searchTerm) {
+      params.search = searchTerm;
     }
-  }, [searchTerm]);
+    return params;
+  }, [searchTerm, page]);
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetching,
-    isLoading,
-    isError,
-  } = useInfiniteQuery({
-    queryKey: ['apps', searchTerm],
-    queryFn: fetchApps,
-    initialPageParam: 1,
-    getNextPageParam: (lastPage) => {
-      if (!lastPage?.meta) return undefined;
-      if (lastPage.meta.page < lastPage.meta.totalPages) {
-        return lastPage.meta.page + 1;
-      }
-      return undefined;
+  // Используем useQuery с параметрами
+  const { data: appsData, isLoading, isError } = $api.useQuery('get', '/api/apps', {
+    params: {
+      query: queryParams
     },
   });
 
-  const allApps = useMemo(() => {
-    if (!data) return [];
-    return data.pages.flatMap((page) => page.data);
-  }, [data]);
-
-  const ROW_GAP = 16;
-
-  const rowVirtualizer = useVirtualizer({
-    count: allApps.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 200 + ROW_GAP,
-    overscan: 5,
-  });
+  const apps = appsData?.data;
+  const totalPages = appsData?.pageCount || 1;
 
   const debouncedSearch = useCallback(
     debounce((value: string) => {
       setSearchTerm(value);
+      setPage(1); // Сбрасываем страницу при новом поиске
     }, 300),
-    [setSearchTerm]
+    []
   );
 
-  useEffect(() => {
-    const [lastItem] = [...rowVirtualizer.getVirtualItems()].reverse();
-
-    if (!lastItem) {
-      return;
+  const handleLoadMore = () => {
+    if (page < totalPages) {
+      setPage(prev => prev + 1);
     }
-
-    if (
-      lastItem.index >= allApps.length - 1 &&
-      hasNextPage &&
-      !isFetching
-    ) {
-      fetchNextPage();
-    }
-  }, [hasNextPage, fetchNextPage, allApps.length, isFetching, rowVirtualizer]);
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -104,72 +68,53 @@ const ApplicationStep: React.FC = () => {
         className="search-input"
         onChange={(e: React.ChangeEvent<HTMLInputElement>) => debouncedSearch(e.target.value)}
       />
-      {isLoading ? (
+      {isLoading && page === 1 ? (
         <div className="loading-container">
           <Spinner size="l" />
         </div>
       ) : isError ? (
         <Typography className="error-message" style={{ textAlign: 'center', display: 'block' }}>Произошла ошибка при загрузке приложений</Typography>
-      ) : allApps.length === 0 ? (
+      ) : apps?.length === 0 ? (
         <Typography className="no-results">Приложения не найдены</Typography>
       ) : (
-        <div ref={parentRef} style={{ height: '55dvh', overflow: 'auto', padding: '5px' }}>
-          <div
-            style={{
-              height: `${rowVirtualizer.getTotalSize()}px`,
-              position: 'relative',
-              width: '100%',
-            }}
-          >
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const app = allApps[virtualRow.index];
-
-              return (
-                <div
-                  key={virtualRow.index}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: `${virtualRow.size}px`,
-                    transform: `translateY(${virtualRow.start}px)`,
-                    padding: `${ROW_GAP / 2}px 0`,
-                  }}
-                >
-                  <Card 
-                    onClick={() => setApplication(app)}
-                    className="application-card"
-                    style={{ 
-                      outline: application?.id === app.id ? '2px solid #3390EC' : '2px solid transparent',
-                      height: `${virtualRow.size - ROW_GAP}px`,
-                    }}
-                  >
-                    <React.Fragment>
-                      {application?.id === app.id && (
-                        <CardChip readOnly style={{ zIndex: 2000 }}>
-                          Выбрано
-                        </CardChip>
-                      )}
-                      <Image
-                        src={app.image || '/fallback-app-image.webp'}
-                        alt={app.name}
-                        className="application-logo"
-                      />
-                      <CardCell readOnly>
-                        {app.name}
-                      </CardCell>
-                    </React.Fragment>
-                  </Card>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-      {isFetching && !isLoading && (
-        <div className="loading-container">
-          <Spinner size="m" />
+        <div style={{ height: '55dvh', overflow: 'auto', padding: '5px' }}>
+          {apps?.map((app) => (
+            <Card 
+              key={app.id}
+              onClick={() => setApplication(app)}
+              className="application-card"
+              style={{ 
+                outline: application?.id === app.id ? '2px solid #3390EC' : '2px solid transparent',
+                marginBottom: '16px',
+              }}
+            >
+              <React.Fragment>
+                {application?.id === app.id && (
+                  <CardChip readOnly style={{ zIndex: 2000 }}>
+                    Выбрано
+                  </CardChip>
+                )}
+                <Image
+                  src={app.image || '/fallback-app-image.webp'}
+                  alt={app.name}
+                  className="application-logo"
+                />
+                <CardCell readOnly>
+                  {app.name}
+                </CardCell>
+              </React.Fragment>
+            </Card>
+          ))}
+          {page < totalPages && (
+            <Button onClick={handleLoadMore} style={{ width: '100%', marginTop: '1rem' }}>
+              Загрузить еще
+            </Button>
+          )}
+          {isLoading && page > 1 && (
+            <div className="loading-container" style={{ marginTop: '1rem' }}>
+              <Spinner size="m" />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -179,57 +124,30 @@ const ApplicationStep: React.FC = () => {
 const GameStep: React.FC = () => {
   const { setGame, game, application } = useSubscriptionStore();
   const [searchTerm, setSearchTerm] = useState('');
-  const parentRef = React.useRef<HTMLDivElement>(null);
 
-  const fetchGames = useCallback(async ({ pageParam = 1 }) => {
-    if (!application) {
-      throw new Error("Application is not selected");
-    }
-    try {
-      const result = searchTerm
-        ? await searchGames(application.id, searchTerm, pageParam, 20)
-        : await getGames(application.id, pageParam, 20);
-      return result;
-    } catch (error) {
-      console.error('Error fetching games:', error);
-      throw error;
-    }
-  }, [application, searchTerm]);
-
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetching,
-    isLoading,
-    isError,
-  } = useInfiniteQuery({
-    queryKey: ['games', application?.id, searchTerm],
-    queryFn: fetchGames,
-    initialPageParam: 1,
-    getNextPageParam: (lastPage) => {
-      if (!lastPage?.page) return undefined;
-      if (lastPage.page < lastPage.totalPages) {
-        return lastPage.page + 1;
+  const query = useMemo(() => {
+    const appId = application.id;
+    const search = searchTerm.length > 0 && searchTerm;
+    if (search) {
+      return {
+        appId,
+        search,
       }
-      return undefined;
+    } else return {
+      appId,
+    }
+  }, [application.id, searchTerm])
+
+  const  { data: games, isLoading, isError } = 
+    $api.useQuery('get', '/api/games', {
+      params: {
+        query
+      },
     },
-    enabled: !!application,
-  });
-
-  const allGames = useMemo(() => {
-    if (!data) return [];
-    return data.pages.flatMap((v) => v.data);
-  }, [data]);
-
-  const ROW_GAP = 16; // Оставляем тот же отступ между строками
-
-  const rowVirtualizer = useVirtualizer({
-    count: allGames.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 200 + ROW_GAP, // Оставляем тот же размер
-    overscan: 5,
-  });
+    {
+      enabled: !!application
+    }
+  );
 
   const debouncedSearch = useCallback(
     debounce((value: string) => {
@@ -237,22 +155,6 @@ const GameStep: React.FC = () => {
     }, 300),
     [setSearchTerm]
   );
-
-  useEffect(() => {
-    const [lastItem] = [...rowVirtualizer.getVirtualItems()].reverse();
-
-    if (!lastItem) {
-      return;
-    }
-
-    if (
-      lastItem.index >= allGames.length - 1 &&
-      hasNextPage &&
-      !isFetching
-    ) {
-      fetchNextPage();
-    }
-  }, [hasNextPage, fetchNextPage, allGames.length, isFetching, rowVirtualizer]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -267,69 +169,40 @@ const GameStep: React.FC = () => {
         </div>
       ) : isError ? (
         <Typography className="error-message" style={{ textAlign: 'center', display: 'block' }}>Произошла ошибка при загрузке игр</Typography>
-      ) : allGames.length === 0 ? (
+      ) : games && games?.data?.length === 0 ? (
         <Typography className="no-results">Игры не найдены</Typography>
       ) : (
-        <div ref={parentRef} style={{ height: '55dvh', overflow: 'auto', padding: '5px' }}>
-          <div
-            style={{
-              height: `${rowVirtualizer.getTotalSize()}px`,
-              position: 'relative',
-              width: '100%',
-            }}
-          >
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const currentGame = allGames[virtualRow.index];
-
-              return (
-                <div
-                  key={virtualRow.index}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: `${virtualRow.size}px`, // Убираем вычитание ROW_GAP
-                    transform: `translateY(${virtualRow.start}px)`,
-                    padding: `${ROW_GAP / 2}px 0`, // Добавляем отступ сверху и снизу
-                  }}
-                >
-                  <Card 
-                    onClick={() => setGame(currentGame)}
-                    className="game-card"
-                    style={{ 
-                      outline: game?.id === currentGame.id ? '2px solid #3390EC' : '2px solid transparent',
-                      height: `${virtualRow.size - ROW_GAP}px`, // Уменьшаем высоту карточки на величину отступа
-                    }}
-                  >
-                    <React.Fragment>
-                      <Badge style={{ position: 'absolute', top: '1.5rem', left: '0.5rem', zIndex: 2000 }} type="number">{application?.name}</Badge>
-                      {game?.id === currentGame.id && (
-                        <CardChip readOnly style={{ zIndex: 2000 }}>
-                          Выбрано
-                        </CardChip>
-                      )}
-                      { currentGame.image && (
-                        <Image
-                          src={currentGame.image}
-                          alt={currentGame.name}
-                          className="game-logo"
-                        />
-                      ) }
-                      <CardCell readOnly>
-                        {currentGame.name}
-                      </CardCell>
-                    </React.Fragment>
-                  </Card>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-      {isFetching && !isLoading && (
-        <div className="loading-container">
-          <Spinner size="m" />
+        <div style={{ height: '55dvh', overflow: 'auto', padding: '5px' }}>
+          {games?.data?.map((currentGame) => (
+            <Card 
+              key={currentGame.id}
+              onClick={() => setGame(currentGame)}
+              className="game-card"
+              style={{ 
+                outline: game?.id === currentGame.id ? '2px solid #3390EC' : '2px solid transparent',
+                marginBottom: '16px',
+              }}
+            >
+              <React.Fragment>
+                <Badge style={{ position: 'absolute', top: '1.5rem', left: '0.5rem', zIndex: 2000 }} type="number">{application?.name}</Badge>
+                {game?.id === currentGame.id && (
+                  <CardChip readOnly style={{ zIndex: 2000 }}>
+                    Выбрано
+                  </CardChip>
+                )}
+                { currentGame.image && (
+                  <Image
+                    src={currentGame.image}
+                    alt={currentGame.name}
+                    className="game-logo"
+                  />
+                ) }
+                <CardCell readOnly>
+                  {currentGame.name}
+                </CardCell>
+              </React.Fragment>
+            </Card>
+          ))}
         </div>
       )}
     </div>
@@ -339,32 +212,23 @@ const GameStep: React.FC = () => {
 const SuccessStep: React.FC = () => {
   const { game, application, reset } = useSubscriptionStore();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
 
-  const handleCreateSubscription = async () => {
+  const { mutate, isPending, isSuccess } = $api.useMutation('post', '/api/subscriptions');
+
+  const handleCreateSubscription = () => {
     if (!game || !application) {
       setError("Игра или приложение не выбраны");
       return;
     }
 
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const subscriptionData: CreateSubscriptionDto = {
-        gameId: game.id,
+    mutate({
+      body: {
         appId: application.id,
+        gameId: game.id,
         isSubscribed: true,
-      };
-      const newSubscription = await createSubscription(subscriptionData);
-      setSubscription(newSubscription);
-    } catch (err) {
-      setError("Не удалось создать подписку. Пожалуйста, попробуйте еще раз.");
-    } finally {
-      setIsLoading(false);
-    }
+      }
+    });
   };
 
   const handleReturnHome = () => {
@@ -372,7 +236,7 @@ const SuccessStep: React.FC = () => {
     navigate('/');
   };
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="loading-container">
         <Spinner size="l" />
@@ -390,7 +254,7 @@ const SuccessStep: React.FC = () => {
     );
   }
 
-  if (subscription) {
+  if (isSuccess) {
     return (
       <div className="success-message">
         <IconButton name="check-circle" size="l" color="var(--tgui--primary_color)">
@@ -400,7 +264,7 @@ const SuccessStep: React.FC = () => {
           Подписка успешно добавлена!
         </Typography>
         <Typography>
-          Вы будете получать уведомления об обновлениях для игры {subscription.game.name} в приложении {subscription.app.name}.
+          Вы будете получать уведомления об обновлениях для игры {game?.name} в приложении {application?.name}.
         </Typography>
         <Button onClick={handleReturnHome} className="home-link">
           Вернуться на главную

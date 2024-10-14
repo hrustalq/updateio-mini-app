@@ -1,10 +1,9 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { Button, Section, Skeleton, Typography } from '@telegram-apps/telegram-ui';
 import { useZxing } from "react-zxing";
-import { useMutation } from '@tanstack/react-query';
-import { confirmQr } from '@/api';
 import { Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import $api from '@/api';
 
 export const QRAuthPage: React.FC = () => {
   const [result, setResult] = useState<string | null>(null);
@@ -23,14 +22,16 @@ export const QRAuthPage: React.FC = () => {
     },
   });
 
-  const { mutateAsync, isPending } = useMutation({
-    mutationFn: confirmQr
-  })
+  const { mutateAsync, isPending, status } = $api.useMutation('post', `/api/auth/qr-code/confirm`, { retry: false })
 
   const handleQRData = async (qrData: string) => {
     if (isScanning) return;
     try {
-      await mutateAsync(qrData);
+      mutateAsync({
+        body: {
+          code: qrData,
+        }
+      });
     } catch (err) {
       setError("Произошла ошибка при выполненнии запроса");
     } finally {
@@ -38,19 +39,13 @@ export const QRAuthPage: React.FC = () => {
     }
   };
 
-  const retry = useCallback(() => {
-    setResult(null);
-    setError(null);
-    setIsScanning(true);
-  }, [])
-
   return (
     <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <Typography style={{ marginBottom: '20px', textAlign: 'center' }}>
         Нажмите кнопку для сканирования QR-кода и авторизации в другом приложении
       </Typography>
 
-      {isScanning && !result ? (
+      {isScanning && !result && status !== 'pending' ? (
         <video style={{ display: 'block', width: '80vw', height: '50vh', borderRadius: '50px', overflow: 'hidden', objectFit: 'cover', margin: '0 auto' }} ref={ref} />
       ) :
         (
@@ -58,7 +53,7 @@ export const QRAuthPage: React.FC = () => {
         )
       }
 
-      {result && !isPending && (
+      {result && !isPending && status === 'success' && (
         <Section>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Check width={32} height={32} style={{ color: 'green' }} />
@@ -79,7 +74,7 @@ export const QRAuthPage: React.FC = () => {
           <Typography style={{ marginTop: '20px', color: 'red', textAlign: 'center' }}>
             {error}
           </Typography>
-          <Button style={{ marginTop: '20px' }} onClick={() => retry()}>Попробовать еще раз</Button>
+          <Button style={{ marginTop: '20px' }} onClick={() => window.location.reload()}>Перезагрузить страницу</Button>
         </Section>
       )}
     </div>

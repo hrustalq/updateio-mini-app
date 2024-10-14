@@ -1,47 +1,26 @@
-import { FC, useState, useEffect } from 'react';
+import { FC } from 'react';
 import { List, Section, Cell, Avatar, Button, Spinner, Typography } from '@telegram-apps/telegram-ui';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle } from 'lucide-react';
-import { getUserSubscriptions, unsubscribeFromGame } from '@/api/games';
-import { Subscription, PaginatedResponse } from '@/api/types';
+import { AlertCircle, Plus } from 'lucide-react';
+import $api from '@/api';
 
 export const SubscriptionsPage: FC = () => {
   const navigate = useNavigate();
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchSubscriptions();
-  }, []);
+  const { data: subscriptions, isLoading, error } = $api.useQuery('get', '/api/subscriptions');
+  const { mutateAsync: unsubscribe } = $api.useMutation('delete', '/api/subscriptions/{id}');
 
-  const fetchSubscriptions = async () => {
-    try {
-      setLoading(true);
-      const response: PaginatedResponse<Subscription> = await getUserSubscriptions();
-      setSubscriptions(response.data);
-      setError(null);
-    } catch (err) {
-      setError('Не удалось загрузить подписки. Пожалуйста, попробуйте позже.');
-    } finally {
-      setLoading(false);
-    }
+  const handleUnsubscribe = async (id: string) => {
+    await unsubscribe({
+      params: {
+        path: {
+          id
+        }
+      }
+    });
   };
 
-  const handleUnsubscribe = async (subscription: Subscription) => {
-    try {
-      await unsubscribeFromGame(subscription.id);
-      
-      // Remove the subscription from the list
-      setSubscriptions(prevSubscriptions => 
-        prevSubscriptions.filter(sub => sub.id !== subscription.id)
-      );
-    } catch (err) {
-      setError('Не удалось отменить подписку. Пожалуйста, попробуйте позже.');
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'var(--layout-height)' }}>
         <Spinner size="l" />
@@ -49,66 +28,86 @@ export const SubscriptionsPage: FC = () => {
     );
   }
 
+  const handleRefresh = () => {
+    window.location.reload()
+  }
+
+  if (error) {
+    return (
+      <div className='h-full flex-grow flex items-center justify-center flex-col'>
+        <Section>
+          <Cell
+            before={<AlertCircle size={32} color="#d63031" />}
+            multiline
+          >
+            <Typography style={{ color: '#d63031' }}>
+              Произошла ошибка при выполнении запроса. Пожалуйста, попробуйте еще раз.
+            </Typography>
+          </Cell>
+          <div className='flex items-center w-full py-3'>
+            <Button onClick={handleRefresh} className='mx-auto block'>Перезагрузить</Button>
+          </div>
+        </Section>
+      </div>
+    );
+  }
+
+  const hasSubscriptions = subscriptions && subscriptions.data?.length > 0;
+
   return (
     <List>
-      <Section>
-        <Cell
-          after={<Button size="s">Добавить</Button>}
-          onClick={() => navigate('/subscriptions/add')}
-        >
-          Добавить подписку
-        </Cell>
-      </Section>
-
-      {subscriptions.length > 0 ? (
-        <Section header="Мои подписки">
-          {subscriptions.map((subscription) => (
+      {hasSubscriptions ? (
+        <>
+          <Section>
             <Cell
-              key={subscription.id}
-              before={
-                <Avatar
-                  size={40}
-                  src={subscription.game.image || '/fallback-game-image.webp'}
-                  alt={subscription.game.name}
-                />
-              }
-              after={
-                <Button
-                  size="s"
-                  onClick={() => handleUnsubscribe(subscription)}
-                >
-                  Отписаться
-                </Button>
-              }
-              description={`${subscription.app.name}`}
+              before={<Plus size={24} />}
+              after={<Button size="s">Добавить</Button>}
+              onClick={() => navigate('/subscriptions/add')}
             >
-              {subscription.game.name}
+              Добавить подписку
             </Cell>
-          ))}
-        </Section>
+          </Section>
+          <Section header="Мои подписки">
+            {subscriptions.data.map((subscription) => (
+              <Cell
+                key={subscription.id}
+                before={
+                  <Avatar
+                    size={40}
+                    src={subscription.game.image || '/fallback-game-image.webp'}
+                    alt={subscription.game.name}
+                  />
+                }
+                after={
+                  <Button
+                    size="s"
+                    onClick={() => handleUnsubscribe(subscription.id)}
+                  >
+                    Отписаться
+                  </Button>
+                }
+                description={`${subscription.app.name}`}
+              >
+                {subscription.game.name}
+              </Cell>
+            ))}
+          </Section>
+        </>
       ) : (
         <Section>
           <Cell multiline>
-            <Typography>
-              У вас пока нет подписок. <br /> Добавьте первую подписку, чтобы начать получать уведомления об обновлениях игр.
+            <Typography style={{ marginBottom: '16px' }}>
+              У вас пока нет подписок. Добавьте первую подписку, чтобы начать получать уведомления об обновлениях игр.
             </Typography>
+            <Button
+              size="m"
+              before={<Plus size={20} />}
+              onClick={() => navigate('/subscriptions/add')}
+            >
+              Добавить подписку
+            </Button>
           </Cell>
         </Section>
-      )}       
-      {error && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '16px',
-          backgroundColor: '#fef1f1',
-          border: '1px solid #fcd2d2',
-          borderRadius: '8px',
-          color: '#d63031',
-          margin: '16px'
-        }}>
-          <AlertCircle size={48} style={{ marginRight: '8px' }} />
-          <Typography>{error}</Typography>
-        </div>
       )}
     </List>
   );

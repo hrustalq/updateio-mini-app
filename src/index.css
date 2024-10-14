@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   --bottom-menu-height: 60px;
   --breadcrumb-height: calc(56px + 0.5rem);
