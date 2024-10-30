@@ -1,5 +1,16 @@
-import { App, Game } from '@/api/types';
 import { create } from 'zustand';
+
+interface App {
+  id: number;
+  name: string;
+  image: string | null;
+}
+
+interface Game {
+  id: number;
+  name: string;
+  image: string | null;
+}
 
 // Определение хранилища
 export interface SubscriptionStore {
