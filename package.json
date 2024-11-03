@@ -26,6 +26,7 @@
     "clsx": "^2.1.1",
     "eruda": "^3.0.1",
     "framer-motion": "^11.11.1",
+    "jsqr": "^1.4.0",
     "lodash": "^4.17.21",
     "lucide-react": "^0.447.0",
     "openapi-fetch": "^0.12.2",
